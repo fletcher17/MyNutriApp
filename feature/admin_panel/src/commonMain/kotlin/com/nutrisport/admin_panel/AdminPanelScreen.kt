@@ -1,15 +1,16 @@
 package com.nutrisport.admin_panel
 
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import com.nutrisport.shared.BebasNeueFont
+import com.nutrisport.shared.ButtonPrimary
 import com.nutrisport.shared.FontSize
 import com.nutrisport.shared.IconPrimary
 import com.nutrisport.shared.Resources
@@ -20,7 +21,8 @@ import org.jetbrains.compose.resources.painterResource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminPanelScreen(
-    navigateBack: () -> Unit
+    navigateBack: () -> Unit,
+    navigateToManageProduct: (String?) -> Unit
 ) {
 
     Scaffold(
@@ -59,6 +61,19 @@ fun AdminPanelScreen(
                     actionIconContentColor = IconPrimary
                 )
 
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navigateToManageProduct(null) },
+                containerColor = ButtonPrimary,
+                contentColor = IconPrimary,
+                content = {
+                    Icon(
+                        painter = painterResource(Resources.Icon.Plus),
+                        contentDescription = "Add icon"
+                    )
+                }
             )
         }
     ) {  }
