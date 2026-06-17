@@ -2,12 +2,14 @@ package com.nutrisport.manage_product
 
 import ContentWithMessageBar
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -17,11 +19,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -32,10 +36,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.nutrisport.manage_product.util.PhotoPicker
 import com.nutrisport.shared.BebasNeueFont
 import com.nutrisport.shared.BorderIdle
+import com.nutrisport.shared.ButtonPrimary
 import com.nutrisport.shared.FontSize
 import com.nutrisport.shared.IconPrimary
 import com.nutrisport.shared.Resources
@@ -43,10 +56,15 @@ import com.nutrisport.shared.Surface
 import com.nutrisport.shared.TextPrimary
 import com.nutrisport.shared.component.AlertTextField
 import com.nutrisport.shared.component.CustomTextField
+import com.nutrisport.shared.component.ErrorCard
+import com.nutrisport.shared.component.LoadingCard
 import com.nutrisport.shared.component.PrimaryButton
 import com.nutrisport.shared.component.dialog.CategoriesDialog
 import com.nutrisport.shared.domain.ProductCategory
+import com.nutrisport.shared.util.DisplayResult
+import com.nutrisport.shared.util.RequestState
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import rememberMessageBarState
 
@@ -61,7 +79,21 @@ fun ManageProductScreen(
     val viewModel = koinViewModel<ManageProductViewModel>()
     val screenState = viewModel.screenState
     val isFormValid = viewModel.isFormValid
+    val thumbnailUploaderState = viewModel.thumbnailUploaderSate
     var showCategoriesDialog by remember { mutableStateOf(false) }
+
+    val photoPicker = koinInject<PhotoPicker>()
+
+    photoPicker.InitializePhotoPicker(
+        onImageSelect = { file ->
+            viewModel.uploadThumbnailToStorage(
+                file = file,
+                onSuccess = {
+                    messageBarState.addSuccess("Thumbnail uploaded successfully!")
+                })
+
+        }
+    )
 
     AnimatedVisibility(
         visible = showCategoriesDialog
@@ -85,7 +117,7 @@ fun ManageProductScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = if (id == null)"New Product" else "Edit Product",
+                        text = if (id == null) "New Product" else "Edit Product",
                         fontFamily = BebasNeueFont(),
                         fontSize = FontSize.LARGE,
                         color = TextPrimary
@@ -119,7 +151,7 @@ fun ManageProductScreen(
             contentBackgroundColor = Surface,
             messageBarState = messageBarState,
             errorMaxLines = 2
-        ){
+        ) {
             Column(
                 modifier = Modifier
                     .padding(horizontal = 24.dp)
@@ -144,15 +176,89 @@ fun ManageProductScreen(
                                 color = BorderIdle,
                                 shape = RoundedCornerShape(size = 12.dp)
                             )
-                            .clickable { },
+                            .clickable(enabled = thumbnailUploaderState.isIdle()) {
+                                photoPicker.open()
+                            },
                         contentAlignment = Alignment.Center
-                    ){
-                        Icon(
-                            modifier = Modifier.size(24.dp),
-                            painter = painterResource(Resources.Icon.Plus),
-                            contentDescription = "Plus icon",
-                            tint = IconPrimary
+                    ) {
+                        thumbnailUploaderState.DisplayResult(
+                            onLoading = {
+                                LoadingCard()
+                            },
+                            onIdle = {
+                                Icon(
+                                    modifier = Modifier.size(24.dp),
+                                    painter = painterResource(Resources.Icon.Plus),
+                                    contentDescription = "Plus icon",
+                                    tint = IconPrimary
+                                )
+                            },
+                            onSuccess = {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    AsyncImage(
+                                        modifier = Modifier.fillMaxSize(),
+                                        model = ImageRequest.Builder(
+                                            LocalPlatformContext.current
+                                        ).data(screenState.thumbnail)
+                                            .crossfade(enable = true)
+                                            .build(),
+                                        contentDescription = "Product thumbnail image",
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(size = 6.dp))
+                                            .padding(top = 12.dp, end = 12.dp)
+                                            .background(ButtonPrimary)
+                                            .clickable { viewModel.deleteImageFromStorage(
+                                                onSuccess = {
+                                                    messageBarState.addSuccess("Image deleted successfully")
+                                                },
+                                                onError = { message ->
+                                                    messageBarState.addError(message)
+                                                }
+                                            )}
+                                            .padding(12.dp)
+                                            .align(Alignment.TopEnd),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            modifier = Modifier.size(14.dp),
+                                            painter = painterResource(Resources.Icon.Delete),
+                                            contentDescription = "Delete icon"
+                                        )
+                                    }
+                                }
+                            },
+                            onError = { message ->
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    ErrorCard(message = message)
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    TextButton(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onClick = {
+                                            viewModel.updateThumbnailUploaderState(
+                                                RequestState.Idle
+                                            )
+                                        },
+                                        colors = ButtonDefaults.textButtonColors(
+                                            containerColor = Color.Transparent,
+                                        )
+                                    ) {
+                                        Text(
+                                            text = "Try again",
+                                            fontSize = FontSize.SMALL,
+                                            color = TextPrimary
+                                        )
+                                    }
+                                }
+                            }
                         )
+
                     }
                     CustomTextField(
                         value = screenState.title,

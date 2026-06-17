@@ -7,7 +7,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nutrisport.shared.domain.Product
 import com.nutrisport.shared.domain.ProductCategory
+import com.nutrisport.shared.util.RequestState
 import com.nutrisports.data.domain.AdminRepository
+import dev.gitlive.firebase.storage.File
 import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -17,7 +19,7 @@ data class ManageProductScreenState(
     val id: String = Uuid.random().toHexString(),
     val title: String = "",
     val description: String = "",
-    val thumbnail: String = "Thumbnail",
+    val thumbnail: String = "",
     val category: ProductCategory = ProductCategory.Protein,
     val flavors: String = "",
     val weight: Int? = null,
@@ -29,6 +31,9 @@ class ManageProductViewModel(
 ) : ViewModel() {
 
     var screenState by mutableStateOf(ManageProductScreenState())
+        private set
+
+    var thumbnailUploaderSate: RequestState<Unit> by mutableStateOf(RequestState.Idle)
         private set
 
     val isFormValid: Boolean
@@ -52,6 +57,10 @@ class ManageProductViewModel(
         screenState = screenState.copy(
             thumbnail = value
         )
+    }
+
+    fun updateThumbnailUploaderState(value: RequestState<Unit>) {
+        thumbnailUploaderSate = value
     }
 
     fun updateCategory(value: ProductCategory) {
@@ -100,5 +109,47 @@ class ManageProductViewModel(
         }
     }
 
+    fun uploadThumbnailToStorage(file: File?, onSuccess: () -> Unit) {
+        if (file == null) {
+            updateThumbnailUploaderState(RequestState.Error("File is null, Error while selecting an image"))
+            return
+        }
+
+        updateThumbnailUploaderState(RequestState.Loading)
+
+        viewModelScope.launch {
+            try {
+                val downloadUrl = adminRepository.uploadImageToStorage(file)
+                if (downloadUrl.isNullOrEmpty()) {
+                    throw Exception("Failed to retrieve a download URL after the upload")
+                }
+                onSuccess()
+                updateThumbnail(downloadUrl)
+                updateThumbnailUploaderState(RequestState.Success(Unit))
+            } catch (e: Exception) {
+                updateThumbnailUploaderState(RequestState.Error("Error while uploading: $e"))
+            }
+        }
+    }
+
+    fun deleteImageFromStorage(
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            adminRepository.deleteImageFromStorage(
+                downloadUrl = screenState.thumbnail,
+                onSuccess = {
+                    onSuccess()
+                    updateThumbnail("")
+                    updateThumbnailUploaderState(RequestState.Idle)
+                },
+                onError = { message ->
+                    onError(message)
+                }
+            )
+        }
+
+    }
 
 }
