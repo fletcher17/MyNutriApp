@@ -15,6 +15,10 @@ import dev.gitlive.firebase.storage.File
 actual class PhotoPicker {
     private var openPhotoPicker = mutableStateOf(false)
 
+    actual fun open() {
+        openPhotoPicker.value = true
+    }
+
     @Composable
     actual fun InitializePhotoPicker(onImageSelect: (File?) -> Unit) {
         val openPhotoPickerState by remember { openPhotoPicker }
@@ -35,9 +39,5 @@ actual class PhotoPicker {
             }
         }
 
-    }
-
-    actual fun open() {
-        openPhotoPicker.value = true
     }
 }

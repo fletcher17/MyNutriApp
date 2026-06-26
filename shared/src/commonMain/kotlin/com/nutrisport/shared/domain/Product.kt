@@ -7,10 +7,14 @@ import com.nutrisport.shared.CategoryPurple
 import com.nutrisport.shared.CategoryRed
 import com.nutrisport.shared.CategoryYellow
 import kotlinx.serialization.Serializable
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
+@OptIn(ExperimentalTime::class)
 @Serializable
-data class Product(
+data class Product (
     val id: String,
+    val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
     val title: String,
     val description: String,
     val thumbnail: String,
@@ -47,5 +51,12 @@ enum class ProductCategory(
     Accessories(
         title = "Accessories",
         color = CategoryRed
-    )
+    );
+
+    companion object {
+        fun fromString(value: String): ProductCategory? {
+            return entries.find { it.title.equals(value, ignoreCase = true) }
+                ?: entries.find { it.name.equals(value, ignoreCase = true) }
+        }
+    }
 }

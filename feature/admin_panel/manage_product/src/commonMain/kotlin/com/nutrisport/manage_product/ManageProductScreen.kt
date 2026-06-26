@@ -212,7 +212,7 @@ fun ManageProductScreen(
                                             .background(ButtonPrimary)
                                             .clickable { viewModel.deleteImageFromStorage(
                                                 onSuccess = {
-                                                    messageBarState.addSuccess("Image deleted successfully")
+                                                    messageBarState.addSuccess("Image removed successfully")
                                                 },
                                                 onError = { message ->
                                                     messageBarState.addError(message)
@@ -277,23 +277,31 @@ fun ManageProductScreen(
                         text = screenState.category.title,
                         onClick = { showCategoriesDialog = true }
                     )
-                    CustomTextField(
-                        value = "${screenState.weight ?: ""}",
-                        onValueChange = {
-                            viewModel.updateWeight(it.toIntOrNull() ?: 0)
-                        },
-                        placeholder = "Weight (Optional)",
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number
-                        )
-                    )
-                    CustomTextField(
-                        value = screenState.flavors,
-                        onValueChange = {
-                            viewModel.updateFlavors(it)
-                        },
-                        placeholder = "Flavors (Optional)"
-                    )
+                    AnimatedVisibility(
+                        visible = screenState.category != ProductCategory.Accessories
+                    ) {
+                        Column {
+                            CustomTextField(
+                                value = "${screenState.weight ?: ""}",
+                                onValueChange = {
+                                    viewModel.updateWeight(it.toIntOrNull() ?: 0)
+                                },
+                                placeholder = "Weight (Optional)",
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            CustomTextField(
+                                value = screenState.flavors,
+                                onValueChange = {
+                                    viewModel.updateFlavors(it)
+                                },
+                                placeholder = "Flavors (Optional)"
+                            )
+                        }
+
+                    }
                     CustomTextField(
                         value = "${screenState.price}",
                         onValueChange = { value ->
@@ -313,10 +321,17 @@ fun ManageProductScreen(
                     icon = if (id == null) Resources.Icon.Plus else Resources.Icon.Checkmark,
                     enabled = isFormValid,
                     onClick = {
-                        viewModel.createNewProduct(
-                            onSuccess = { messageBarState.addSuccess("Product added successfully") },
-                            onError = { message -> messageBarState.addError(message) }
-                        )
+                        if (id != null) {
+                            viewModel.updateProduct(
+                                onSuccess = { messageBarState.addSuccess("Product updated successfully")},
+                                onError = { message -> messageBarState.addError(message) }
+                            )
+                        } else {
+                            viewModel.createNewProduct(
+                                onSuccess = { messageBarState.addSuccess("Product added successfully") },
+                                onError = { message -> messageBarState.addError(message) }
+                            )
+                        }
                     }
                 )
             }

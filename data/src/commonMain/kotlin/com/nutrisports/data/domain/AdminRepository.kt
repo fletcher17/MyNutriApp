@@ -3,6 +3,7 @@ package com.nutrisports.data.domain
 import com.nutrisport.shared.domain.Product
 import com.nutrisport.shared.util.RequestState
 import dev.gitlive.firebase.storage.File
+import kotlinx.coroutines.flow.Flow
 
 interface AdminRepository {
 
@@ -17,4 +18,20 @@ interface AdminRepository {
     suspend fun uploadImageToStorage(file: File): String?
 
     suspend fun deleteImageFromStorage(downloadUrl: String, onSuccess: () -> Unit, onError: (String) -> Unit)
+
+    fun readLastTenProduct(): Flow<RequestState<List<Product>>>
+    suspend fun readProductById(id: String): RequestState<Product>
+
+    suspend fun updateImageThumbnail(
+        productId: String,
+        downloadUrl: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    )
+
+    suspend fun updateProduct(
+        product: Product,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    )
 }

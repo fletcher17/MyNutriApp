@@ -29,9 +29,11 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
-            implementation(compose.preview)
+            implementation(libs.ktor.android.client)
             implementation(libs.androidx.activity.compose)
-            implementation(libs.splash.screen)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.darwin.client)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -43,6 +45,11 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.kotlinx.serialization)
+
+            implementation(libs.coil3)
+            implementation(libs.coil3.compose)
+            implementation(libs.coil3.compose.core)
+            implementation(libs.coil3.network.ktor)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
